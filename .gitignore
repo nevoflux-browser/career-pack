@@ -1,0 +1,7 @@
+# macOS
+.DS_Store
+
+# Node / build artifacts (career-scan dashboard build, added later)
+node_modules/
+dist/
+*.tsbuildinfo
