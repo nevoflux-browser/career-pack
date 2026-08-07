@@ -11,8 +11,8 @@ tags:
   - analytics
   - patterns
 dependencies:
-  - conventions/career-data
-  - conventions/career-scoring
+  - career:conventions/data.md
+  - career:conventions/scoring.md
 allowed_tools:
   - brain_get_page
   - brain_search
@@ -25,8 +25,8 @@ enabled: true
 # /career-patterns
 
 Find patterns in application outcomes and recommend changes. Load
-`conventions/career-data` (status taxonomy + tracker schema) and
-`conventions/career-scoring` (archetypes, score).
+`career:conventions/data.md` (status taxonomy + tracker schema) and
+`career:conventions/scoring.md` (archetypes, score).
 
 ## Threshold
 
@@ -76,4 +76,4 @@ findings, link to the report.
 - set a score threshold under `career/profile` for PDF generation,
 - adjust archetype targeting based on what's converting.
 
-Edit `career/profile` only — **never** `career/cv` and never `_career-rules`.
+Edit `career/profile` only — **never** `career/cv` and never `career:conventions/rules.md`.

@@ -11,8 +11,8 @@ tags:
   - training
   - upskilling
 dependencies:
-  - conventions/career-data
-  - conventions/career-scoring
+  - career:conventions/data.md
+  - career:conventions/scoring.md
 allowed_tools:
   - web_search
   - fetch_page
@@ -24,7 +24,7 @@ enabled: true
 # /career-training
 
 Decide if a training/cert moves the user toward their goal. Load
-`conventions/career-scoring` for the user's north-star / archetypes.
+`career:conventions/scoring.md` for the user's north-star / archetypes.
 
 ## Step 0 — Context & research
 

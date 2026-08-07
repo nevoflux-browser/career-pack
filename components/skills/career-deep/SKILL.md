@@ -12,7 +12,7 @@ tags:
   - interview-prep
   - company
 dependencies:
-  - conventions/career-data
+  - career:conventions/data.md
 allowed_tools:
   - web_search
   - fetch_page

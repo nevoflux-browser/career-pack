@@ -11,8 +11,8 @@ tags:
   - portfolio
   - project
 dependencies:
-  - conventions/career-scoring
-  - conventions/career-data
+  - career:conventions/scoring.md
+  - career:conventions/data.md
 allowed_tools:
   - brain_get_page
   - web_search
@@ -24,7 +24,7 @@ enabled: true
 # /career-project
 
 Decide whether a project idea is worth building to strengthen the user's
-candidacy. Load `conventions/career-scoring` for the user's target archetypes /
+candidacy. Load `career:conventions/scoring.md` for the user's target archetypes /
 north-star.
 
 ## Step 0 — Context

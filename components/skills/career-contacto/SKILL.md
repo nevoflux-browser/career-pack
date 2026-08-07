@@ -12,8 +12,8 @@ tags:
   - linkedin
   - networking
 dependencies:
-  - conventions/career-writing
-  - conventions/career-data
+  - career:conventions/writing.md
+  - career:conventions/data.md
 allowed_tools:
   - web_search
   - fetch_page
@@ -29,11 +29,11 @@ enabled: true
 
 # /career-contacto
 
-Draft outreach for one role. The always-on `_career-rules` apply — in
-particular: **never include a phone number, and never send anything**. This
-skill drafts; the human reviews and sends. If you read LinkedIn in the user's
+Draft outreach for one role. The always-on rules in `career:conventions/rules.md`
+apply — in particular: **never include a phone number, and never send anything**.
+This skill drafts; the human reviews and sends. If you read LinkedIn in the user's
 session to personalize, it is **read-only** — do not send connection requests or
-DMs. Load `conventions/career-writing` for tone (no corporate-speak, no
+DMs. Load `career:conventions/writing.md` for tone (no corporate-speak, no
 "passionate about", something that earns a reply).
 
 ## Step 0 — Context
