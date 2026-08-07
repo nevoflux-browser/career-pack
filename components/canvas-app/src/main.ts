@@ -58,6 +58,21 @@ function stripFences(s: string): string {
   return (m ? m[1] : s).trim();
 }
 
+// agent.chat resolves to an unknown shape (typed `any`). Accept a string, an
+// object that is already the config, or a common chat-envelope text field.
+function parseConfig(raw: unknown): PortalConfig {
+  if (raw && typeof raw === "object" && Array.isArray((raw as PortalConfig).tracked_companies)) {
+    return raw as PortalConfig;
+  }
+  const text =
+    typeof raw === "string"
+      ? raw
+      : ((["text", "content", "message", "output_text", "response"] as const)
+          .map((k) => (raw as Record<string, unknown> | null)?.[k])
+          .find((v): v is string => typeof v === "string") ?? JSON.stringify(raw));
+  return JSON.parse(stripFences(text)) as PortalConfig;
+}
+
 async function loadConfig(): Promise<PortalConfig> {
   const raw = await window.NevofluxSDK.agent.chat(
     "Read the GBrain page career/profile and return ONLY its `## Portals` section " +
@@ -66,8 +81,7 @@ async function loadConfig(): Promise<PortalConfig> {
       "(each {name, careers_url?, api?, provider?, extract?, search?, enabled?}), throttle_ms?, max_jobs?. " +
       "Return JSON only — no prose, no explanation.",
   );
-  const text = typeof raw === "string" ? raw : (raw?.text ?? JSON.stringify(raw));
-  const config = JSON.parse(stripFences(text)) as PortalConfig;
+  const config = parseConfig(raw);
   if (!config || !Array.isArray(config.tracked_companies)) {
     throw new Error("career/profile has no usable `## Portals` config (tracked_companies missing)");
   }
@@ -124,18 +138,21 @@ function renderJobRow(job: Job): HTMLElement {
 function renderInbox(res: ScanResult): void {
   inboxRoot.replaceChildren();
 
-  if (res.fresh.length === 0) {
-    inboxRoot.append(el("p", { class: "empty" }, ["No fresh jobs this scan."]));
+  // Cluster fresh + reposts together; reposts carry `.repost === true` (set by
+  // dedup) so their badges render. Stats still report the two counts separately.
+  const allJobs = [...res.fresh, ...res.reposts];
+  if (allJobs.length === 0) {
+    inboxRoot.append(el("p", { class: "empty" }, ["No new jobs this scan."]));
   } else {
-    for (const [company, jobs] of clusterByCompany(res.fresh)) {
-      const repostCount = jobs.filter((j) => j.repost).length;
+    for (const [company, companyJobs] of clusterByCompany(allJobs)) {
+      const repostCount = companyJobs.filter((j) => j.repost).length;
       const header = el("div", { class: "cluster-header" }, [
         el("span", { class: "cluster-name" }, [company]),
-        el("span", { class: "cluster-count" }, [`${jobs.length} job${jobs.length === 1 ? "" : "s"}`]),
+        el("span", { class: "cluster-count" }, [`${companyJobs.length} job${companyJobs.length === 1 ? "" : "s"}`]),
       ]);
       if (repostCount > 0) header.append(el("span", { class: "badge badge-repost" }, [`${repostCount} repost`]));
       const cluster = el("div", { class: "cluster" }, [header]);
-      for (const job of jobs) cluster.append(renderJobRow(job));
+      for (const job of companyJobs) cluster.append(renderJobRow(job));
       inboxRoot.append(cluster);
     }
   }
@@ -157,7 +174,8 @@ async function runScan(): Promise<void> {
   try {
     appendLog("info", "loading portal config from career/profile…");
     const config = await loadConfig();
-    appendLog("info", `scanning ${config.tracked_companies.length} tracked companies…`);
+    const activeCount = config.tracked_companies.filter((e) => e.enabled !== false).length;
+    appendLog("info", `scanning ${activeCount} tracked companies…`);
     const ctx = makeScanContext((lvl, msg) => appendLog(lvl as LogLevel, msg));
     const res = await scanAll(config, ctx);
     renderStats(res.stats);
