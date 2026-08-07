@@ -1,10 +1,14 @@
 # macOS
 .DS_Store
 
-# Node / build artifacts (career-scan dashboard build, added later)
+# Node / build artifacts
 node_modules/
 dist/
 *.tsbuildinfo
+
+# …but the dashboard's prebuilt dist IS shipped (pack.toml files_from points at it)
+!components/canvas-app/dist/
+!components/canvas-app/dist/**
 
 # Superpowers SDD scratch workspace
 .superpowers/

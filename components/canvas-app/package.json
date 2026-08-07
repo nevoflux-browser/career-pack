@@ -1,0 +1,11 @@
+{
+  "name": "career-pack-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Minimal zero-token scan dashboard for career-pack (Canvas artifact).",
+  "scripts": {
+    "build": "bun build index.html --outdir dist --minify",
+    "clean": "rm -rf dist"
+  }
+}
