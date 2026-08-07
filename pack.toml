@@ -16,6 +16,20 @@ content_type = "project"
 files_from = "components/canvas-app/dist"
 entry = "index.html"
 
+# Seeded only when the page is absent (idempotent); every seed slug is covered
+# by [components.protected] below, so uninstall never deletes user data.
+[[components.seed]]
+slug = "career/cv"
+from = "components/seed/cv.template.md"
+
+[[components.seed]]
+slug = "career/profile"
+from = "components/seed/profile.template.md"
+
+[[components.seed]]
+slug = "career/applications"
+from = "components/seed/applications.template.md"
+
 [components.protected]
 slugs = [
   "career/cv", "career/profile", "career/applications", "career/scan-history",
