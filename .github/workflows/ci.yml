@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  dashboard:
+    name: dashboard (typecheck · test · build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: components/canvas-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install deps
+        run: bun install --frozen-lockfile
+      - name: Typecheck
+        run: bun run typecheck
+      - name: Test
+        run: bun test
+      - name: Build
+        run: bun run build
+
+  manifest:
+    name: pack.toml (offline validation)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate pack.toml
+        run: |
+          python3 - <<'PY'
+          import tomllib
+
+          m = tomllib.load(open("pack.toml", "rb"))
+          pack = m["pack"]
+          assert pack["name"] == "career-pack", pack["name"]
+          assert pack["protocol"] == "pack-protocol/0.1", pack["protocol"]
+          assert pack["namespace"] == "career", pack.get("namespace")
+
+          comps = m["components"]
+          assert comps["skills"]["dir"] == "components/skills"
+
+          dash = comps["dashboard"]
+          assert dash["artifact_id"].startswith("career-pack"), dash["artifact_id"]
+          assert dash["content_type"] == "project"
+          assert dash["files_from"] == "components/canvas-app/dist"
+          assert dash["entry"] == "index.html"
+
+          # Protocol rule: every seed slug must be covered by protected.
+          protected = comps.get("protected", {})
+          prot_slugs = set(protected.get("slugs", []))
+          for s in comps.get("seed", []):
+              assert s["slug"] in prot_slugs, f"seed {s['slug']} not in protected.slugs"
+
+          print("pack.toml OK:", pack["name"], pack["version"])
+          PY

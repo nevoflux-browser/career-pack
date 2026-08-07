@@ -2,7 +2,7 @@
 // entry's careers_url (or explicit `api:`), fetches JSON via callTool('web_fetch'),
 // and normalizes to Job[]. No auth, no LLM, no scraping.
 
-import type { Job, PortalEntry, Provider, ScanContext } from "../types.js";
+import type { Job, PortalEntry, Provider } from "../types.js";
 
 // ── Greenhouse ──────────────────────────────────────────────────────
 const GH_HOSTS = /(?:job-boards(?:\.eu)?|boards)\.greenhouse\.io\/([^/?#]+)/;
