@@ -10,6 +10,10 @@ license = "MIT"
 [components.skills]
 dir = "components/skills"
 
+[components.canvas_tools]
+files = ["components/canvas-tools/pdf-render.toml"]
+external_binaries = ["weasyprint"]
+
 [components.dashboard]
 artifact_id = "career-pack-dashboard"
 content_type = "project"

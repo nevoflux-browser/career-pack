@@ -49,6 +49,10 @@ jobs:
           assert dash["files_from"] == "components/canvas-app/dist"
           assert dash["entry"] == "index.html"
 
+          ct = comps.get("canvas_tools")
+          if ct:
+              assert ct.get("files"), "canvas_tools declared but files[] is empty"
+
           # Protocol rule: every seed slug must be covered by protected.
           protected = comps.get("protected", {})
           prot_slugs = set(protected.get("slugs", []))

@@ -1,0 +1,25 @@
+# Render an HTML file to an ATS-friendly PDF via WeasyPrint.
+# Schema mirrors the platform's command canvas-tools (see examples/canvas-tools/
+# ffmpeg-trim.toml). Both path params are locked to $SESSION_DIR, so the tool can
+# only read/write inside the current session's sandbox.
+
+name = "pdf.render"
+description = "Render an HTML file to an ATS-friendly PDF (WeasyPrint)"
+kind = "command"
+binary = "weasyprint"
+args_mode = "template"
+args = ["{{input}}", "{{output}}"]
+
+[params.input]
+type = "path"
+allowed_prefix = "$SESSION_DIR"
+
+[params.output]
+type = "path"
+allowed_prefix = "$SESSION_DIR"
+
+[constraints]
+timeout_seconds = 120
+cwd = "$SESSION_DIR"
+max_stdout_bytes = 4096
+max_stderr_bytes = 65536

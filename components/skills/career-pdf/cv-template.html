@@ -1,0 +1,93 @@
+<!doctype html>
+<!--
+  ATS-friendly CV template for career-pdf → pdf.render (WeasyPrint).
+  The skill reads this via skill_read('career-pdf','cv-template.html'), fills the
+  {{placeholders}} from career/cv (tailored to the JD per career:conventions/
+  writing.md), writes the result into $SESSION_DIR, and renders it to PDF.
+
+  ATS rules (keep them): single column, real text (no images/icons for content),
+  standard section headings, no tables for core content, one accent colour.
+  Repeat the .job / .li blocks as needed; delete unused optional lines.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>{{name}} — CV</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 16mm 15mm;
+      }
+      * { box-sizing: border-box; }
+      body {
+        font: 10.5pt/1.4 "Helvetica Neue", Arial, sans-serif;
+        color: #1a1a1a;
+        margin: 0;
+      }
+      h1 { font-size: 20pt; margin: 0 0 2pt; }
+      .contact { font-size: 9pt; color: #444; margin-bottom: 10pt; }
+      .contact a { color: #2f6bff; text-decoration: none; }
+      h2 {
+        font-size: 11pt;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #2f6bff;
+        border-bottom: 1px solid #d7dbe0;
+        padding-bottom: 2pt;
+        margin: 14pt 0 6pt;
+      }
+      .summary { margin: 0 0 4pt; }
+      .job { margin-bottom: 8pt; }
+      .job-head { display: flex; justify-content: space-between; font-weight: bold; }
+      .job-sub { font-size: 9pt; color: #555; margin-bottom: 2pt; }
+      ul { margin: 2pt 0 0; padding-left: 16pt; }
+      li { margin-bottom: 1.5pt; }
+      .skills { margin: 0; }
+      .row { display: flex; justify-content: space-between; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>{{name}}</h1>
+      <div class="contact">
+        {{title}} · {{location}} ·
+        <a href="{{email_or_link}}">{{email_or_link}}</a> ·
+        <a href="{{github}}">{{github}}</a> ·
+        <a href="{{portfolio}}">{{portfolio}}</a>
+      </div>
+    </header>
+
+    <section>
+      <h2>Summary</h2>
+      <p class="summary">{{summary_tailored_to_jd}}</p>
+    </section>
+
+    <section>
+      <h2>Experience</h2>
+
+      <div class="job">
+        <div class="job-head">
+          <span>{{role}} — {{company}}</span>
+          <span>{{start}}–{{end}}</span>
+        </div>
+        <div class="job-sub">{{optional_one_line_context}}</div>
+        <ul>
+          <li>{{quantified_bullet_relevant_to_jd}}</li>
+          <li>{{quantified_bullet}}</li>
+        </ul>
+      </div>
+
+      <!-- repeat .job blocks, most-relevant-to-the-JD first -->
+    </section>
+
+    <section>
+      <h2>Skills</h2>
+      <p class="skills">{{skills_matched_to_jd_keywords_from_cv}}</p>
+    </section>
+
+    <section>
+      <h2>Education</h2>
+      <div class="row"><span>{{degree}} — {{institution}}</span><span>{{year}}</span></div>
+    </section>
+  </body>
+</html>
