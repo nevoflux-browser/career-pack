@@ -1,0 +1,19 @@
+[pack]
+name = "career-pack"
+namespace = "career"
+version = "0.1.0"
+protocol = "pack-protocol/0.1"
+min_nevoflux = "0.3.0"
+description = "AI-native career copilot pack: scan, evaluate, outreach, research, portfolio & training skills."
+license = "MIT"
+
+[components.skills]
+dir = "components/skills"
+
+[components.protected]
+slugs = [
+  "career/cv", "career/profile", "career/applications", "career/scan-history",
+]
+prefixes = [
+  "career/reports/", "career/companies/", "career/projects/", "career/training/",
+]
