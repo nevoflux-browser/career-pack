@@ -32,8 +32,8 @@ Find patterns in application outcomes and recommend changes. Load
 
 Read `career/applications`. Require **≥5 entries with a status beyond
 `evaluated`** (applied / responded / interview / offer / rejected / discarded /
-skip). If not met, say: "Not enough data yet — {N}/5 applications have progressed
-beyond evaluation." and exit gracefully.
+ghosted / skip). If not met, say: "Not enough data yet — {N}/5 applications have
+progressed beyond evaluation." and exit gracefully.
 
 ## Accuracy & token note
 
@@ -48,8 +48,8 @@ skill may compute them itself, but keep the tracker read scoped.
 
 - **Funnel**: count + % per status stage.
 - **Score vs outcome**: avg/min/max score per group — positive (applied/
-  responded/interview/offer), negative (rejected/discarded), self-filtered
-  (skip), pending (evaluated).
+  responded/interview/offer), negative (rejected/discarded/ghosted),
+  self-filtered (skip), pending (evaluated).
 - **Archetype performance**: per archetype — total, positive, conversion rate;
   highlight best and worst.
 - **Top blockers**: frequency of hard blockers (geo-restriction, stack-mismatch,

@@ -59,6 +59,7 @@ One row per evaluated posting. Columns (append-only):
 | `remote_policy` | Remote bucket (global / regional / geo-restricted / hybrid-onsite). |
 | `blockers` | `none` or a list of hard-blocker keys. |
 | `status` | Current stage (see taxonomy). |
+| `followup_due` | Date (`YYYY-MM-DD`) the next follow-up is due; set when status→applied, bumped after each touch. Empty = none scheduled. |
 | `report` | Report slug under `career/reports/`. |
 | `pdf` | `pending` / `generated` / `n/a`. |
 | `outcome` | Terminal result once known (mirrors a terminal status). |
@@ -70,13 +71,17 @@ One row per evaluated posting. Columns (append-only):
 evaluated → applied → responded → interview → offer
                     ↘ rejected
                     ↘ discarded      (user dropped it)
+                    ↘ ghosted        (applied, no reply, given up — set via career-followup)
                     ↘ skip           (self-filtered, never applied)
 ```
 
 - `evaluated` is the entry state (career-evaluate writes it).
+- `applied` sets `followup_due`; career-followup surfaces rows whose
+  `followup_due` has passed, and proposes `ghosted` for `applied` rows with no
+  reply after ~21 days (never auto-applied — the user confirms).
 - career-patterns requires **≥5 rows past `evaluated`** to run, and groups
   outcomes as positive (applied/responded/interview/offer), negative
-  (rejected/discarded), self-filtered (skip), pending (evaluated).
+  (rejected/discarded/ghosted), self-filtered (skip), pending (evaluated).
 
 ## Append-only / serial-merge discipline
 

@@ -84,16 +84,16 @@ Confirm it exists (seeded). Leave the example row for the user to delete on
 their first real entry. Only `brain_put_page` the empty tracker if the page is
 absent.
 
-## Step 5 — Offer the weekly patterns loop
+## Step 5 — Offer the review loops
 
 `browser_ask_user` before creating anything. If the user agrees, tell them to
-run `/loop 7d /career-patterns` (or use the platform's loop UI) — a weekly
-review that surfaces the funnel + conversion analysis once ≥5 applications have
-progressed past `evaluated`. Do **not** create the loop silently.
+create two loops (or use the platform's loop UI) — do **not** create them
+silently:
 
-> A daily follow-up loop is part of the design but is **not available yet** — it
-> needs the `career-followup` skill. Mention it as coming; don't wire a loop to a
-> skill that isn't installed.
+- **Daily follow-up** — `/loop 1d /career-followup`: surfaces due follow-ups and
+  ghosted candidates from the tracker, and drafts the nudges.
+- **Weekly patterns** — `/loop 7d /career-patterns`: funnel + conversion
+  analysis, once ≥5 applications have progressed past `evaluated`.
 
 ## Boundaries
 
