@@ -124,6 +124,7 @@ career-evaluate saves the full assessment via `brain_put_page` to
 ## E) Location / remote & eligibility
 ## F) Growth & risk signals
 ## G) Posting legitimacy      (signals + benign readings)
+## H) Application answers     (appended by career-auto-pipeline)
 ## I) Outreach drafts         (appended by career-contacto)
 ```
 
