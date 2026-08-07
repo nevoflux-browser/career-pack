@@ -22,9 +22,9 @@ read-only; those invariants bind everything here.
 
 | Slug | Role | Access |
 |---|---|---|
-| `career/cv` | The user's CV — source of truth for experience/metrics. | **Read-only** to every skill. |
+| `career/cv` | The user's CV — source of truth for experience/metrics. | **Read-only** after onboarding; career-setup writes it once, from the user's input. |
 | `career/article-digest` | Distilled metrics/proof points; **takes precedence over the CV** for metrics. | **Read-only.** |
-| `career/profile` | Target archetypes, north-star, `## Portals` filters, PDF score threshold. | Read by all; **written only by career-patterns, with user confirmation.** |
+| `career/profile` | Target archetypes, north-star, `## Portals` filters, PDF score threshold. | Read by all; **written by career-setup (initial) and career-patterns (updates, on confirmation).** |
 | `career/applications` | The application tracker (one row per evaluated job). | **Append-only** (see schema + discipline). |
 | `career/scan-history` | Dedup / repost state for career-scan. | Written by the scan module (dashboard, zero-token). |
 | `career/story-bank` | Reusable STAR stories. | Appended by career-project. |
@@ -33,8 +33,10 @@ read-only; those invariants bind everything here.
 | `career/projects/{slug}` | Portfolio-project evaluations. | Created by career-project. |
 | `career/training/{slug}` | Training/cert evaluations. | Created by career-training. |
 
-**Never edit** `career/cv`, `career/article-digest`, or `conventions/rules.md`.
-Edit `career/profile` only from career-patterns, only after `browser_ask_user`.
+**Never edit** `career/article-digest` or `conventions/rules.md`. `career/cv` is
+written **only** by career-setup during onboarding (from the user's input), then
+read-only. `career/profile` is written by career-setup (initial) and
+career-patterns (updates) — the latter only after `browser_ask_user`.
 
 > Alignment note: `pack.toml`'s `[components.protected]` currently protects
 > `career/cv`, `career/profile`, `career/applications`, `career/scan-history`

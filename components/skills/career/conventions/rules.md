@@ -20,8 +20,11 @@ relax these.
 
 1. Invent experience, metrics, or proof points. Read them from `career/cv` and
    `career/article-digest` at evaluation time.
-2. Modify the user's CV or portfolio pages (`career/cv`, `career/profile`,
-   `career/article-digest`). They are read-only to every skill.
+2. Invent or alter the user's CV / portfolio content. `career/cv` and
+   `career/article-digest` are read-only to every skill; `career/profile` is
+   read-only **except** to career-patterns (on confirmation). The one onboarding
+   exception: **career-setup** writes the initial `career/cv` and
+   `career/profile` from the user's own input — transcribing, never inventing.
 3. Submit an application on the user's behalf. The system evaluates and drafts;
    the human decides and acts. This maps to nevoflux's progressive autonomy —
    even in Agent mode, the final submit is a human action.
