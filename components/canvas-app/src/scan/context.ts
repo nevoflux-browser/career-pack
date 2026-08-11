@@ -32,37 +32,46 @@ function asText(result: any): string {
   return result?.content ?? result?.body ?? result?.text ?? result?.markdown ?? "";
 }
 
+// One reused scan tab. The platform exposes no "close tab" action to canvas
+// apps, so instead of opening a fresh tab per company (8 tabs left open), we
+// reuse a single tab. If a reuse-navigate drifts to the wrong tab, we reset and
+// open a fresh one — so the happy path is ONE tab, and correctness never depends
+// on the reuse sticking. The tab is reused across scan runs too (self-heals if
+// the user closed it).
+let scanTabId: string | undefined;
+
 /**
  * Zero-token GET of a URL's raw body. The eval sandbox cannot make network
  * requests (XHR and fetch both fail with NetworkError even same-origin), but it
  * CAN read a loaded document. So we open `view-source:<url>` — Firefox renders
  * the raw response bytes as plain text (no JSON viewer) — and read
- * document.body.textContent. Zero token: the browser fetches, we just read.
- *
- * Each fetch opens its OWN fresh tab (creating a tab with a view-source: URL
- * works; re-navigating an existing tab to view-source did not) and pins the eval
- * to that exact tab via tab_id. navigate resolves only after the page finishes
- * loading, so no extra wait is needed. We verify the tab's href before trusting
- * the text, so eval can never hand back one of the user's other open tabs.
+ * document.body.textContent. Zero token: the browser fetches, we just read. We
+ * verify the tab's href each attempt and retry on drift, so eval never hands
+ * back one of the user's other open tabs.
  */
 async function evalFetchText(url: string): Promise<string> {
   const host = new URL(url).host;
-  const nav = (await call("navigate", { url: "view-source:" + url, new_tab: true })) as
-    | { tab_id?: string; tabId?: string }
-    | undefined;
-  const tabId = nav?.tab_id ?? nav?.tabId;
+  const vsUrl = "view-source:" + url;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const navParams: Record<string, unknown> =
+        scanTabId == null ? { url: vsUrl, new_tab: true } : { url: vsUrl, tab_id: scanTabId };
+      const nav = (await call("navigate", navParams)) as { tab_id?: string; tabId?: string } | undefined;
+      if (scanTabId == null) scanTabId = nav?.tab_id ?? nav?.tabId;
 
-  const evalParams: Record<string, unknown> = {
-    script: `(function () { var b = document.body; return { href: location.href, text: b ? b.textContent : "" }; })()`,
-  };
-  if (tabId != null) evalParams.tab_id = tabId;
-  const v = (await call("eval_js", evalParams)) as { href?: string; text?: string } | undefined;
-
-  const href = v?.href ?? "";
-  if (!href.includes(host)) throw new Error(`fetch ${url}: tab showed "${href}" (not ${host})`);
-  const text = v?.text ?? "";
-  if (!text) throw new Error(`fetch ${url}: empty response [${href}]`);
-  return text;
+      const evalParams: Record<string, unknown> = {
+        script: `(function () { var b = document.body; return { href: location.href, text: b ? b.textContent : "" }; })()`,
+      };
+      if (scanTabId != null) evalParams.tab_id = scanTabId;
+      const v = (await call("eval_js", evalParams)) as { href?: string; text?: string } | undefined;
+      if (v?.href?.includes(host) && v.text) return v.text;
+    } catch {
+      // fall through and retry with a fresh tab
+    }
+    scanTabId = undefined; // drift or error → next attempt opens a fresh tab
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`fetch ${url}: could not load after retries`);
 }
 
 export function makeScanContext(logSink?: LogSink): ScanContext {
