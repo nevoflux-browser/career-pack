@@ -124,7 +124,14 @@ function renderJobRow(job: Job): HTMLElement {
   const titleChildren: (Node | string)[] = [];
   const href = safeHref(job.url);
   if (href) {
-    titleChildren.push(el("a", { href, target: "_blank", rel: "noopener noreferrer" }, [job.title]));
+    // Canvas artifacts run in a sandboxed iframe where <a target="_blank"> is
+    // blocked, so open the JD via the SDK's navigate action instead.
+    const link = el("a", { href, class: "job-link" }, [job.title]);
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      void window.NevofluxSDK.callTool("navigate", { url: href, new_tab: true });
+    });
+    titleChildren.push(link);
   } else {
     titleChildren.push(job.title);
   }
@@ -204,12 +211,21 @@ function renderNoSdk(): void {
 
 function renderShell(): void {
   scanBtn = el("button", { class: "scan-btn", onclick: runScan as unknown as HTMLButtonElement["onclick"] }, ["Scan"]);
+  const resetBtn = el("button", { class: "reset-btn" }, ["Reset seen"]);
+  resetBtn.addEventListener("click", () => {
+    void window.NevofluxSDK.storage.set("career:scan:seen-ids", []);
+    void window.NevofluxSDK.storage.set("career:scan:seen-titles", []);
+    appendLog("info", "cleared scan history — the next Scan shows all matching jobs.");
+  });
   statsRoot = el("div", { class: "stats" });
   inboxRoot = el("div", { class: "inbox" });
   logRoot = el("div", { class: "log-pane" });
 
   app.replaceChildren(
-    el("header", { class: "app-header" }, [el("h1", {}, ["Career Scan"]), scanBtn]),
+    el("header", { class: "app-header" }, [
+      el("h1", {}, ["Career Scan"]),
+      el("div", { class: "actions" }, [resetBtn, scanBtn]),
+    ]),
     statsRoot,
     el("div", { class: "columns" }, [
       el("section", { class: "col-inbox" }, [el("h2", {}, ["Inbox"]), inboxRoot]),

@@ -53,7 +53,8 @@ export async function scanAll(config: PortalConfig, ctx?: ScanContext): Promise<
   const cap = config.max_jobs ?? 300;
 
   const failed: { name: string; error: string }[] = [];
-  let raw: Job[] = [];
+  let rawJobs = 0;
+  const filtered: Job[] = [];
 
   for (const entry of config.tracked_companies) {
     if (entry.enabled === false) continue;
@@ -65,20 +66,27 @@ export async function scanAll(config: PortalConfig, ctx?: ScanContext): Promise<
     try {
       c.log("info", `scanning ${entry.name} via ${provider.id} (${provider.kind})`);
       const jobs = await provider.fetch(entry, c);
-      raw.push(...jobs);
+      rawJobs += jobs.length;
+      // Filter each company's jobs as they arrive: the cap counts RELEVANT jobs,
+      // so one big board's many off-target postings don't stop the scan before
+      // the other companies are ever reached.
+      for (const j of jobs) {
+        if (passesTitle(j.title, config.title_filter) && passesLocation(j.location, config.location_filter)) {
+          filtered.push(j);
+        }
+      }
     } catch (e) {
       failed.push({ name: entry.name, error: (e as Error).message });
       c.log("error", `${entry.name}: ${(e as Error).message}`);
     }
     await c.wait(throttle); // serial + polite; never fan out browser actions
-    if (raw.length >= cap) {
-      c.log("warn", `hit max_jobs cap (${cap}); stopping early`);
+    if (filtered.length >= cap) {
+      c.log("warn", `hit max_jobs cap (${cap}) of relevant jobs; stopping early`);
       break;
     }
   }
 
-  // Filter (title then location), then dedup against history.
-  const filtered = raw.filter((j) => passesTitle(j.title, config.title_filter) && passesLocation(j.location, config.location_filter));
+  // Dedup the filtered jobs against history.
 
   const { ids, titles } = await loadHistory();
   const { fresh, reposts } = dedup(filtered, ids, titles);
@@ -96,7 +104,7 @@ export async function scanAll(config: PortalConfig, ctx?: ScanContext): Promise<
     stats: {
       portals: config.tracked_companies.filter((e) => e.enabled !== false).length,
       failed,
-      rawJobs: raw.length,
+      rawJobs,
       afterFilter: filtered.length,
       fresh: fresh.length,
       reposts: reposts.length,
