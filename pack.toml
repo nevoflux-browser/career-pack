@@ -15,7 +15,7 @@ files = ["components/canvas-tools/pdf-render.toml"]
 external_binaries = ["weasyprint"]
 
 [components.dashboard]
-artifact_id = "career-pack-hybrid"
+artifact_id = "career-pack-jobs"
 content_type = "project"
 files_from = "components/canvas-app/dist"
 entry = "index.html"

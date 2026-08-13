@@ -87,9 +87,11 @@ export const linkedin: Provider = {
         tabId = nav.tabId ?? tabId;
         await ctx.wait(2500); // let results render in the real session
 
-        // Nudge lazy-loading, then extract.
-        await ctx.evalJs<void>(`window.scrollTo(0, document.body.scrollHeight)`);
-        await ctx.wait(800);
+        // Nudge lazy-loading with several scrolls so more cards render.
+        for (let s = 0; s < 4; s++) {
+          await ctx.evalJs<void>(`window.scrollTo(0, document.body.scrollHeight)`);
+          await ctx.wait(700);
+        }
         const rows = await ctx.evalJs<Array<Omit<Job, "company" | "source"> & { company: string }>>(
           extractorSource(SELECTORS),
         );

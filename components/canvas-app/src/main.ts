@@ -89,7 +89,7 @@ async function loadConfig(): Promise<PortalConfig> {
       "{name: \"LinkedIn\", provider: \"linkedin\", search: {keywords: \"<a LinkedIn BOOLEAN query built from the needs: " +
       "wrap every multi-word phrase in double quotes, join the must-have terms with OR, and append the excludes as " +
       "NOT (...); e.g. (\\\"machine learning\\\" OR \\\"ai engineer\\\" OR llm) NOT (sales OR intern OR manager)>\", " +
-      "location: \"<the user's location, or omit>\", remote: <true if the user wants remote>, posted_within: \"r604800\", pages: 2}}. " +
+      "location: \"<the user's location, or omit>\", remote: <true if the user wants remote>, posted_within: \"r604800\", pages: 3}}. " +
       "If career/directory is missing, fall back to career/profile's own `## Portals` list (still append the LinkedIn entry). " +
       "Return JSON only — no prose, no explanation.",
   );

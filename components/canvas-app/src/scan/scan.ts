@@ -71,7 +71,12 @@ export async function scanAll(config: PortalConfig, ctx?: ScanContext): Promise<
       // so one big board's many off-target postings don't stop the scan before
       // the other companies are ever reached.
       for (const j of jobs) {
-        if (passesTitle(j.title, config.title_filter) && passesLocation(j.location, config.location_filter)) {
+        // LinkedIn results are already keyword-filtered by the search query, so
+        // don't re-apply the title filter to them (it drops jobs whose title
+        // lacks the exact keyword). API boards return everything, so those keep
+        // the title filter. Location filter applies to all.
+        const titleOk = j.source === "linkedin" || passesTitle(j.title, config.title_filter);
+        if (titleOk && passesLocation(j.location, config.location_filter)) {
           filtered.push(j);
         }
       }
