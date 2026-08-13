@@ -75,15 +75,27 @@ function parseConfig(raw: unknown): PortalConfig {
 
 async function loadConfig(): Promise<PortalConfig> {
   const raw = await window.NevofluxSDK.agent.chat(
-    "Read the GBrain page career/profile and return ONLY its `## Portals` section " +
-      "parsed as a PortalConfig JSON object with keys: title_filter {positive[], negative?[]}, " +
-      "location_filter? {always_allow?[], allow?[], block?[]}, tracked_companies[] " +
-      "(each {name, careers_url?, api?, provider?, extract?, search?, enabled?}), throttle_ms?, max_jobs?. " +
+    "Build a PortalConfig JSON for a job scan by combining two GBrain pages. " +
+      "1) career/profile — the user's needs: target archetypes, and title/location/salary preferences. " +
+      "2) career/directory — its `## Companies` YAML list of {name, careers_url, tags}. " +
+      "Return ONLY a JSON object with keys: " +
+      "title_filter {positive[], negative?[]} (from the user's must-have / exclude keywords), " +
+      "location_filter? {always_allow?[], allow?[], block?[]} (from the user's remote/location prefs), " +
+      "tracked_companies[] (each {name, careers_url, extract?}) — take these from career/directory, " +
+      "keeping ONLY companies whose tags match the user's target archetypes/domains, capped at 40 " +
+      "(preserve any `extract` field), " +
+      "throttle_ms?, max_jobs?. " +
+      "ALSO append exactly ONE more entry to tracked_companies to search LinkedIn from the same needs: " +
+      "{name: \"LinkedIn\", provider: \"linkedin\", search: {keywords: \"<a LinkedIn BOOLEAN query built from the needs: " +
+      "wrap every multi-word phrase in double quotes, join the must-have terms with OR, and append the excludes as " +
+      "NOT (...); e.g. (\\\"machine learning\\\" OR \\\"ai engineer\\\" OR llm) NOT (sales OR intern OR manager)>\", " +
+      "location: \"<the user's location, or omit>\", remote: <true if the user wants remote>, posted_within: \"r604800\", pages: 2}}. " +
+      "If career/directory is missing, fall back to career/profile's own `## Portals` list (still append the LinkedIn entry). " +
       "Return JSON only — no prose, no explanation.",
   );
   const config = parseConfig(raw);
   if (!config || !Array.isArray(config.tracked_companies)) {
-    throw new Error("career/profile has no usable `## Portals` config (tracked_companies missing)");
+    throw new Error("no usable scan config (career/directory + career/profile produced no companies)");
   }
   return config;
 }
@@ -195,6 +207,95 @@ async function runScan(): Promise<void> {
   }
 }
 
+// ---- onboarding (P1: upload résumé + describe needs → career/cv + career/profile) ----
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const s = String(r.result);
+      resolve(s.slice(s.indexOf(",") + 1)); // strip the data:…;base64, prefix
+    };
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+}
+
+function field(label: string, input: HTMLElement): HTMLElement {
+  return el("label", { class: "field" }, [el("span", { class: "field-label" }, [label]), input]);
+}
+
+function renderOnboarding(): void {
+  const resume = el("input", { type: "file", accept: ".pdf,.md,.txt,.docx", class: "inp" });
+  const northStar = el("input", { type: "text", class: "inp", placeholder: "Production-grade AI engineer shipping LLM products" });
+  const roles = el("input", { type: "text", class: "inp", placeholder: "AI/ML Engineer, Backend Engineer" });
+  const location = el("input", { type: "text", class: "inp", placeholder: "Remote (EU), or Berlin" });
+  const want = el("input", { type: "text", class: "inp", placeholder: "engineer, machine learning, llm" });
+  const avoid = el("input", { type: "text", class: "inp", placeholder: "sales, intern, manager" });
+  const salary = el("input", { type: "text", class: "inp", placeholder: "$150k–200k or €90k+" });
+  const status = el("div", { class: "onb-status" });
+  const saveBtn = el("button", { class: "scan-btn" }, ["Save profile"]);
+  const backBtn = el("button", { class: "reset-btn" }, ["Back to scan"]);
+  backBtn.addEventListener("click", renderShell);
+
+  saveBtn.addEventListener("click", async () => {
+    saveBtn.disabled = true;
+    try {
+      let resumeClause = "";
+      const f = resume.files?.[0];
+      if (f) {
+        status.textContent = "Uploading résumé…";
+        const b64 = await fileToBase64(f);
+        const res = (await window.NevofluxSDK.callTool("cache_file", {
+          name: f.name,
+          content: b64,
+          mime_type: f.type,
+        })) as { success?: boolean; result?: { file_path?: string; path?: string } };
+        const path = res?.result?.file_path ?? res?.result?.path;
+        if (!path) throw new Error("could not save the résumé file");
+        resumeClause =
+          `Read the résumé file at ${path}, parse it, and write its content into the GBrain page ` +
+          "career/cv (per career:conventions/data.md — transcribe, never invent). ";
+      }
+      status.textContent = "Writing your profile…";
+      await window.NevofluxSDK.agent.chat(
+        resumeClause +
+          "Write the GBrain page career/profile from these needs, following the career-setup contract: " +
+          `north-star: "${northStar.value.trim()}"; target archetypes: "${roles.value.trim()}"; ` +
+          `salary target: "${salary.value.trim()}". Include a ## Portals section with ` +
+          `title_filter.positive = [${want.value.trim()}], title_filter.negative = [${avoid.value.trim()}], ` +
+          `and location_filter derived from "${location.value.trim()}" (remote → always_allow:[remote]; ` +
+          "a named place → allow:[that place]). Do NOT list any companies — the scan draws them from " +
+          "career/directory. Return a short confirmation.",
+      );
+      status.textContent = "Saved ✓ — go back and Scan.";
+    } catch (e) {
+      status.textContent = "Error: " + (e as Error).message;
+    } finally {
+      saveBtn.disabled = false;
+    }
+  });
+
+  app.replaceChildren(
+    el("header", { class: "app-header" }, [el("h1", {}, ["Set up your search"]), backBtn]),
+    el("div", { class: "onboarding" }, [
+      el("p", { class: "onb-intro" }, [
+        "Upload your résumé and describe what you want. We find matching jobs from our company " +
+          "directory — you never have to name companies.",
+      ]),
+      field("Résumé (PDF)", resume),
+      field("North-star", northStar),
+      field("Target roles / archetypes", roles),
+      field("Remote / location", location),
+      field("Must-have keywords", want),
+      field("Exclude keywords", avoid),
+      field("Salary target", salary),
+      el("div", { class: "onb-actions" }, [saveBtn]),
+      status,
+    ]),
+  );
+}
+
 // ---- shell / bootstrap ----
 
 function renderNoSdk(): void {
@@ -217,6 +318,8 @@ function renderShell(): void {
     void window.NevofluxSDK.storage.set("career:scan:seen-titles", []);
     appendLog("info", "cleared scan history — the next Scan shows all matching jobs.");
   });
+  const setupBtn = el("button", { class: "reset-btn" }, ["Setup"]);
+  setupBtn.addEventListener("click", renderOnboarding);
   statsRoot = el("div", { class: "stats" });
   inboxRoot = el("div", { class: "inbox" });
   logRoot = el("div", { class: "log-pane" });
@@ -224,7 +327,7 @@ function renderShell(): void {
   app.replaceChildren(
     el("header", { class: "app-header" }, [
       el("h1", {}, ["Career Scan"]),
-      el("div", { class: "actions" }, [resetBtn, scanBtn]),
+      el("div", { class: "actions" }, [setupBtn, resetBtn, scanBtn]),
     ]),
     statsRoot,
     el("div", { class: "columns" }, [

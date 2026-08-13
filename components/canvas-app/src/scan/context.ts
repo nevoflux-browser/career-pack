@@ -90,11 +90,19 @@ export function makeScanContext(logSink?: LogSink): ScanContext {
       }
     },
     async navigate(url, newTab) {
-      const result = await call("navigate", { url, new_tab: !!newTab });
-      return { tabId: result?.tab_id };
+      // Pin the session tab so a following evalJs reads THIS page, not another
+      // of the user's open tabs (same drift fix as the view-source path).
+      const navParams: Record<string, unknown> = { url };
+      if (newTab || scanTabId == null) navParams.new_tab = true;
+      else navParams.tab_id = scanTabId;
+      const result = (await call("navigate", navParams)) as { tab_id?: string; tabId?: string } | undefined;
+      scanTabId = result?.tab_id ?? result?.tabId ?? scanTabId;
+      return { tabId: scanTabId };
     },
     async evalJs<T>(code: string): Promise<T> {
-      return (await call("eval_js", { script: code })) as T;
+      const params: Record<string, unknown> = { script: code };
+      if (scanTabId != null) params.tab_id = scanTabId;
+      return (await call("eval_js", params)) as T;
     },
     async getMarkdown() {
       return asText(await call("get_markdown", {}));

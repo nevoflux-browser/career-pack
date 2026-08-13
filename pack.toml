@@ -15,7 +15,7 @@ files = ["components/canvas-tools/pdf-render.toml"]
 external_binaries = ["weasyprint"]
 
 [components.dashboard]
-artifact_id = "career-pack-scan"
+artifact_id = "career-pack-hybrid"
 content_type = "project"
 files_from = "components/canvas-app/dist"
 entry = "index.html"
@@ -34,9 +34,14 @@ from = "components/seed/profile.template.md"
 slug = "career/applications"
 from = "components/seed/applications.template.md"
 
+[[components.seed]]
+slug = "career/directory"
+from = "components/seed/directory.template.md"
+
 [components.protected]
 slugs = [
   "career/cv", "career/profile", "career/applications", "career/scan-history",
+  "career/directory",
 ]
 prefixes = [
   "career/reports/", "career/companies/", "career/projects/", "career/training/",
