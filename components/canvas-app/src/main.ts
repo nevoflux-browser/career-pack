@@ -207,6 +207,106 @@ async function runScan(): Promise<void> {
   }
 }
 
+// ---- scan the page the user has open (any job platform: Indeed, LinkedIn, …) ----
+
+type RawJob = { title: string; url: string; company: string; location: string };
+
+async function scanCurrentPage(): Promise<void> {
+  scanBtn.disabled = true;
+  logRoot.replaceChildren();
+  try {
+    appendLog("info", "reading the page you have open (scrolling to load more)…");
+    // Scroll the active tab a few times so lazy-loaded job cards render, then extract.
+    for (let i = 0; i < 6; i++) {
+      await window.NevofluxSDK.callTool("eval_js", {
+        script: "window.scrollTo(0, document.body.scrollHeight); 1",
+      });
+      await new Promise((r) => setTimeout(r, 700));
+    }
+    // Runs in the user's active web tab (no tab_id → active tab). Prefers JSON-LD
+    // JobPosting (schema.org, embedded by many boards); falls back to job-like links.
+    const script = `(function () {
+      var out = [], seenUrl = {}, counts = { jsonld: 0, datajk: 0, linkedin: 0, generic: 0 };
+      function push(t, u, c, l) {
+        t = (t || "").replace(/\\s+/g, " ").trim();
+        u = u || location.href;
+        if (!t || t.length < 3 || t.length > 180 || seenUrl[u]) return;
+        seenUrl[u] = 1;
+        out.push({ title: t, url: u, company: (c || "").trim(), location: (l || "").trim() });
+      }
+      // 1) JSON-LD JobPosting
+      try {
+        document.querySelectorAll('script[type="application/ld+json"]').forEach(function (s) {
+          var d; try { d = JSON.parse(s.textContent || "null"); } catch (e) { return; }
+          (Array.isArray(d) ? d : [d]).forEach(function (x) {
+            (x && x["@graph"] ? x["@graph"] : [x]).forEach(function (it) {
+              if (it && it["@type"] === "JobPosting") { counts.jsonld++; push(it.title, it.url, (it.hiringOrganization || {}).name, (((it.jobLocation || {}).address) || {}).addressLocality); }
+            });
+          });
+        });
+      } catch (e) {}
+      // 2) Indeed (each result card carries data-jk)
+      try {
+        document.querySelectorAll("[data-jk]").forEach(function (card) {
+          counts.datajk++;
+          var jk = card.getAttribute("data-jk");
+          var a = card.querySelector('h2 a, a.jcs-JobTitle, a[id^="job_"]') || card.querySelector("a[href]");
+          var title = a ? (a.getAttribute("title") || a.textContent) : "";
+          if (!title) { var sp = card.querySelector('h2 span[title], .jobTitle span'); if (sp) title = sp.getAttribute("title") || sp.textContent; }
+          var ce = card.querySelector('[data-testid="company-name"], [class*="ompanyName"]');
+          var le = card.querySelector('[data-testid="text-location"], [class*="ompanyLocation"]');
+          push(title, (a && a.href) || (location.origin + "/viewjob?jk=" + jk), ce && ce.textContent, le && le.textContent);
+        });
+      } catch (e) {}
+      // 3) LinkedIn (/jobs/view/ anchors)
+      try {
+        document.querySelectorAll('a[href*="/jobs/view/"]').forEach(function (a) {
+          counts.linkedin++;
+          push(a.getAttribute("aria-label") || a.textContent, a.href.split("?")[0], "", "");
+        });
+      } catch (e) {}
+      // 4) generic job-like links (only if nothing structured matched)
+      if (!out.length) {
+        document.querySelectorAll("a[href]").forEach(function (a) {
+          var href = a.href || "";
+          if (/\\/(viewjob|job-details|jobs?|careers?|rc\\/clk|pagead\\/clk)[\\/?]/i.test(href)) { counts.generic++; push(a.textContent, href, "", ""); }
+        });
+      }
+      return { href: location.href, counts: counts, jobs: out.slice(0, 300) };
+    })()`;
+    const r = (await window.NevofluxSDK.callTool("eval_js", { script })) as {
+      value?: { href?: string; counts?: Record<string, number>; jobs?: RawJob[] };
+      result?: { href?: string; counts?: Record<string, number>; jobs?: RawJob[] };
+    };
+    const v = r?.value ?? r?.result;
+    const raw = (v?.jobs ?? []) as RawJob[];
+    appendLog("info", `page: ${v?.href ?? "(unknown)"}`);
+    appendLog("info", `matched — ${JSON.stringify(v?.counts ?? {})}`);
+    const jobs: Job[] = raw
+      .filter((j) => j.title && j.url)
+      .map((j) => ({
+        id: "page:" + j.url,
+        title: j.title,
+        url: j.url,
+        company: j.company || "This page",
+        location: j.location || "",
+        source: "page",
+      }));
+    const res: ScanResult = {
+      fresh: jobs,
+      reposts: [],
+      stats: { portals: 1, failed: [], rawJobs: raw.length, afterFilter: jobs.length, fresh: jobs.length, reposts: 0 },
+    };
+    renderStats(res.stats);
+    renderInbox(res);
+    appendLog("info", `done: ${jobs.length} jobs read from this page.`);
+  } catch (e) {
+    appendLog("error", (e as Error).message);
+  } finally {
+    scanBtn.disabled = false;
+  }
+}
+
 // ---- onboarding (P1: upload résumé + describe needs → career/cv + career/profile) ----
 
 function fileToBase64(file: File): Promise<string> {
@@ -320,6 +420,8 @@ function renderShell(): void {
   });
   const setupBtn = el("button", { class: "reset-btn" }, ["Setup"]);
   setupBtn.addEventListener("click", renderOnboarding);
+  const pageBtn = el("button", { class: "scan-btn" }, ["Scan this page"]);
+  pageBtn.addEventListener("click", scanCurrentPage as unknown as () => void);
   statsRoot = el("div", { class: "stats" });
   inboxRoot = el("div", { class: "inbox" });
   logRoot = el("div", { class: "log-pane" });
@@ -327,7 +429,7 @@ function renderShell(): void {
   app.replaceChildren(
     el("header", { class: "app-header" }, [
       el("h1", {}, ["Career Scan"]),
-      el("div", { class: "actions" }, [setupBtn, resetBtn, scanBtn]),
+      el("div", { class: "actions" }, [setupBtn, resetBtn, pageBtn, scanBtn]),
     ]),
     statsRoot,
     el("div", { class: "columns" }, [
